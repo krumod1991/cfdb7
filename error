@@ -1,0 +1,237 @@
+Have you checked for common technical issues?
+
+Please ensure that your plugin adheres to best practices, including the following:
+
+🔴 Proper sanitization of inputs
+
+ℹ️ Why it matters: Sanitizing inputs is crucial for protecting against security vulnerabilities like SQL injection, handling invalid data, and ensuring that only safe, expected data is processed.
+Please check the official WordPress docs on sanitizing for details — this is a quick summary.
+
+🔍 Identify unsanitized inputs: Check any input coming from sources such as: $_GET , $_POST , $_REQUEST , $_COOKIE , $_SERVER , $_SESSION
+If these inputs aren’t sanitized first, that’s a potential risk! 🕵️
+
+🛠 Fix it: Always wrap any input with the right sanitization function, like:
+Content
+Function
+Plain text
+sanitize_text_field()
+Email
+sanitize_email()
+URL
+esc_url_raw()
+Key
+sanitize_key()
+Integer
+absint()
+
+Refer to the official WordPress documentation for a complete list of sanitization functions.
+👉 Use the most restrictive function that fits the expected content.
+👉 Sanitize as early as possible — ideally as soon as the data is received.
+👉 Only trust what you’ve cleaned yourself.
+
+Example:
+$post_id = (int) $_GET['post_id']; // Sanitized as an integer
+$email = sanitize_email( $_GET['email'] ); // Sanitized as an email
+Your data is now sanitized! 🧼🍏
+
+
+Note: escape functions cannot be used to sanitize. They serve different purposes. Even if they seem to be perfect for this purpose, most of the functions are filterable and people expect to use them to escape. Therefore, another plugin may change what they do and make yours at risk and exploitable.
+
+If you are trying to echo the variable, you have to first sanitize it and then escape it, as for example:
+echo esc_html(sanitize_text_field($_POST['example']));
+Example(s) from your plugin:
+admin/partials/cfdb7_entries_export_all_entry_ids.php:56 <input type="hidden" id="referer_url" value="<?php echo esc_url($referer_url); ?>" />
+ -----> esc_url($referer_url)
+admin/partials/cfdb7_entries_export_entry_ids.php:55 <input type="hidden" id="referer_url" value="<?php echo esc_url($referer_url); ?>" />
+ -----> esc_url($referer_url)
+admin/partials/cfdb7_delete_entries_restore_ids.php:61 <input type="hidden" id="referer_url" value="<?php echo esc_url($referer_url); ?>" />
+ -----> esc_url($referer_url)
+admin/partials/cfdb7_entries_delete_entry_ids.php:86 <input type="hidden" id="referer_url" value="<?php echo esc_url($referer_url); ?>" />
+ -----> esc_url($referer_url)
+... out of a total of 5 incidences.
+
+✔️ You can check this using Plugin Check.
+
+🔴 Proper escaping of outputs
+
+ℹ️ Why it matters: Escaping prevents common security issues like XSS (Cross-Site Scripting) and avoids breaking the HTML structure.
+Please check the official WordPress docs on escaping for details — this is a quick summary.
+
+🔍 Identify unescaped outputs: Check any output ( echo , print , printf , etc. ) outputting a variable (like $title , $key ) or function result (like get_url() )
+If the value is output without escaping, that’s a potential risk! 🕵️
+
+🛠 Fix it: Always wrap any output with the proper escaping function depending on the context, like:
+Context
+Function
+URLs
+esc_url()
+HTML attributes
+esc_attr()
+Text inside HTML tags
+esc_html()
+Raw HTML (careful!)
+wp_kses() , wp_kses_post()
+
+Refer to the official WordPress documentation for a complete list of escaping functions.
+👉 Use the most restrictive function that fits the context.
+👉 Escaping should be applied as late as possible, ideally right before output.
+
+Example:
+echo '<a href="' . esc_url( $profile_link ) . '" class="' . esc_attr( $username ) . '">' . esc_html( $display_name ) . '</a>';
+Your output is now escaped!
+
+
+Note: sanitize functions cannot be used to escape. They serve different purposes. Even if they seem to be perfect for this purpose, most of the functions are filterable and people expect to use them to sanitize. Therefore, another plugin may change what they do and make yours at risk and exploitable.
+
+If you are trying to echo the variable, you have to first sanitize it and then escape it, as for example:
+echo esc_html(sanitize_text_field($_POST['example']));
+Example(s) from your plugin:
+admin/partials/cfdb7_list_table_forms.php:36 $to_date = isset($_GET['to_date']) && !empty($_GET['to_date']) ? sanitize_text_field($_GET['to_date']) : '';
+ -----> sanitize_text_field($_GET['to_date'])
+admin/partials/cfdb7_list_table_forms.php:200 $to_date = isset($_GET['to_date']) && !empty($_GET['to_date']) ? sanitize_text_field($_GET['to_date']) : '';
+ -----> sanitize_text_field($_GET['to_date'])
+admin/partials/cfdb7_entry_logger_information.php:59 $avoid_field = isset($form_settings['avoid_field']) && !empty($form_settings['avoid_field']) ? sanitize_text_field($form_settings['avoid_field']) : "";
+ -----> sanitize_text_field($form_settings['avoid_field'])
+admin/partials/cfdb7_entry_logger_information.php:57 $avoid_duplicate_submission = isset($form_settings['avoid_duplicate_submission']) && !empty($form_settings['avoid_duplicate_submission']) ? sanitize_text_field($form_settings['avoid_duplicate_submission']) : "off";
+ -----> sanitize_text_field($form_settings['avoid_duplicate_submission'])
+... out of a total of 7 incidences.
+
+
+Note: when you need to echo a JSON, it's better to make use of the function wp_json_encode , also, make sure you are not avoiding escaping with the options passed on the second parameter.
+    echo wp_json_encode($array_or_object);
+Example(s) from your plugin:
+admin/class-cfdb7-pro-admin.php:920 echo json_encode($result);
+admin/class-cfdb7-pro-admin.php:765 echo json_encode($result);
+admin/class-cfdb7-pro-admin.php:1297 echo json_encode($result);
+admin/class-cfdb7-pro-admin.php:584 echo json_encode($result);
+... out of a total of 11 incidences.
+
+✔️ You can check this using Plugin Check.
+
+🔴 Nonces and User Permissions Before Processing Requests
+
+ℹ️ Why it matters: Nonces and permissions checks ensure that the request comes from a trusted source, protecting against security threats like CSRF (Cross-Site Request Forgery) attacks.
+Please check the official WordPress docs on nonces and this article for details — this is a quick summary.
+
+🔍 Spot it: Look for functions that interact with $_GET , $_POST , $_REQUEST and perform actions triggered by the user/browser that modify data or perform sensitive actions (e.g., privileged actions or data manipulation). For such actions, you should always check for a nonce.
+Additionally, verify user permissions if the action is restricted to certain roles (e.g., admin, editor).
+When in doubt, play it safe: always check.
+
+🛠 Fix it
+Create a nonce ( wp_nonce_field() , wp_nonce_url() , wp_create_nonce() ). If you need to pass the nonce to JavaScript you can make use of wp_localize_script()
+Pass it with the request.
+Check the nonce ( check_admin_referer() , check_ajax_referer() , wp_verify_nonce() ) , and permissions if applicable ( current_user_can() ) .
+
+Example (nonce check):
+function cfdbpr_save_email(){
+    if ( !isset( $_POST['cfdbpr_nonce'] ) || !wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['cfdbpr_nonce'] ) ), 'cfdbpr_save_email_action' ) ) {
+        wp_send_json_error( 'Invalid nonce.' );
+    }
+
+    if ( !current_user_can( 'edit_posts' ) ) {
+        wp_send_json_error( 'Insufficient permissions.' );
+    }
+
+    if ( isset( $_POST['post_id'] ) && isset( $_POST['price'] ) ) {
+        update_post_meta( absint( $_POST['post_id'] ), 'price', floatval( $_POST['price'] ) );
+    }
+}
+add_action( 'wp_ajax_cfdbpr_save_email', 'cfdbpr_save_email' );
+⚠️ Without nonce and permissions checks, anyone could call this AJAX endpoint and change the price data for any post - risky!
+
+🔴 Use Prefixes for declarations, globals and stored data
+
+ℹ️ Why it matters: Prefixing avoid naming collisions with other themes, plugins, or WordPress core functions.
+A prefix is a string placed in front of a name to avoid collisions. It must be at least 4 characters long, feel distinct and unique to the plugin (do not use common words), and be separated by an underscore or dash.
+Please check the official WordPress docs on avoiding name collisions.
+
+🔍 Identify not prefixed names: Look for any name that is used in a place where it can create a collision.
+Type of element
+Affected elements
+Declarations
+Functions, classes, etc (if not under a namespace)
+Globals
+Global variables, namespaces, define() .
+Data storage
+update_option() , set_transient() , update_post_meta() , etc.
+WordPress declarations
+add_shortcode() , register_post_type() , add_menu_page() , wp_register_script() , wp_localize_script() , add_action( 'wp_ajax_...' ) , etc.
+
+If the defined name for that is not prefixed, that’s a potential issue! 🕵️
+
+🛠 Fix it: Always prefix those names, for example if your plugin is called "CFDB7 Pro" then you could use names like these:
+function cfdbpr_save_post(){ ... }
+class CFDBPR_Admin { ... }
+update_option( 'cfdbpr_options', $options );
+register_setting( 'cfdbpr_settings', 'cfdbpr_user_id', ... );
+define( 'CFDBPR_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+global $cfdbpr_options;
+add_action('wp_ajax_cfdbpr_save_data', ... );
+namespace krumod\cfdb7pro;
+Our tool has automatically detected these common issues, please check your code as there may be more names needing a prefix:
+# Using the common word "custom" as a prefix.
+admin/partials/cfdb7_entries_list_table.php:72 class Custom_WP_List_Table
+admin/partials/cfdb7_delete_entries_list_table.php:67 class Custom_WP_List_Table
+admin/partials/cfdb7_export_logs_list_table.php:67 class Custom_WP_List_Table
+admin/partials/cfdb7_entry_logger_list_table.php:70 class Custom_WP_List_Table
+
+
+Other details
+
+We've detected some other details that you may want to check.
+
+## Using load_plugin_textdomain() for loading the plugin translations is not needed for WordPress.org directory since WordPress 4.6.
+
+When your plugin is hosted on WordPress.org you don't longer need to include load_plugin_textdomain() for the translations under your plugin slug "cfdb7-pro".
+
+Therefore you can remove that call, WordPress will automatically load the translations for you when needed.
+
+If you still support older WordPress versions you'll need to keep it, but please make sure to have the function call in a hook such as init to avoid issues for loading them too early. More information: https://make.wordpress.org/core/2024/10/21/i18n-improvements-6-7/.
+
+From your plugin:
+includes/class-cfdb7-pro-i18n.php:35 load_plugin_textdomain('cfdb7-pro', false, dirname(dirname(plugin_basename(__FILE__))) . '/languages/');
+
+
+
+## Out of Date Libraries
+
+At least one of the 3rd party libraries you're using is out of date. Please upgrade to the latest stable version for better support and security. We do not recommend you use beta releases.
+
+From your plugin:
+admin/js/datatable/responsive.dataTables.js:1 🔴  *! DataTables styling
+   # ↳ Possible URL: https://github.com/DataTables/DataTablesSrc
+
+
+
+
+👉 Your next steps
+
+This is your checklist:
+Have you read the guidelines and this plugin complies with them?
+Have you checked for common technical issues?
+Other details
+
+If there is something that needs to be fixed, please take your time, fix it and update your plugin files at the "Add your plugin" page, while being logged in with your account "krumod".
+Please be concise and do not list the changes done — we will review the entire plugin again — but do share any clarifications or important context you want us to know.
+
+If after checking the list and do the changes you feel that everything is right or need further clarification, please reply to this email and a volunteer will assist you.
+
+If you believe there is a requirement you cannot accomplish and choose not to make changes, your plugin submission will be rejected after three months.
+
+Thanks!
+
+By taking these steps, you're helping the Plugin Review Team work more efficiently — meaning your plugin (along with the thousands of others in the queue) can be reviewed faster. 🚀 We really appreciate your contribution!
+
+Disclaimers
+
+If, at any time during the review process, you wish to change your permalink (aka the plugin slug) "cfdb7-pro", you must explicitly and clearly tell us what you would like it to be. Just changing it in your code and in the display name is not sufficient. Remember, permalinks cannot be altered after approval.
+This email was partially auto-generated, so please be aware that some information might not be entirely accurate. No personal data was shared with the AI during this process. If you notice any obvious errors or something seems off, feel free to reply — we’ll be happy to take a closer look and readjust this automation.
+
+Review ID: AUTOPREREVIEW cfdb7-pro/krumod/13Jan26/T1 13Jan26/3.7.1
+
+
+--
+WordPress Plugins Team | plugins@wordpress.org
+https://make.wordpress.org/plugins/
+https://developer.wordpress.org/plugins/wordpress-org/detailed-plugin-guidelines/
+https://wordpress.org/plugins/plugin-check/
